@@ -1,0 +1,76 @@
+name: coliver_bot
+
+volumes:
+  pgdata:
+  fsmdata:
+# tar backup: docker run --rm -v pgdata:/dbdata -v $(pwd):/backup alpine tar cvf /backup/backup.tar /dbdata
+# untar backup: docker run --rm -v pgdata:/dbdata -v $(pwd):/backup alpine bash -c "cd /dbdata && tar xvf /backup/backup.tar --strip 1"
+
+networks:
+  backnet:
+    driver: bridge
+    internal: true
+  frontnet:
+    driver: bridge
+
+services:
+  cl_bot:
+    container_name: cl_bot
+    depends_on:
+      - cl_postgres
+      - cl_fsmredis
+    build:
+      context: .
+      dockerfile: configs/Dockerfile
+    networks:
+      - frontnet # is it even needed if we long poll?
+      - backnet
+
+  cl_postgres:
+    container_name: cl_postgres
+    image: postgres:alpine
+    command:
+      - "postgres"
+      - "-c"
+      - "config_file=/etc/postgresql.conf"
+    environment:
+      POSTGRES_USER: "${POSTGRES_USER}"
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD}"
+      POSTGRES_DB: "${POSTGRES_DATABASE}"
+    volumes:
+      - pgdata:/var/lib/postgresql/data            # docker volume usage
+      - ./configs/postgresql.conf:/etc/postgresql.conf
+      - ./logs:/logs
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DATABASE}
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+    networks:
+      - frontnet # TODO: remove
+      - backnet
+
+  cl_fsmredis:
+    container_name: cl_fsmredis
+    image: redis:alpine
+    command: >
+      --requirepass ${FSMREDIS_PASSWORD}
+    volumes:
+      - fsmdata:/opt/redis/data
+      - ./configs/redis.conf:/usr/local/etc/redis/redis.conf
+      - ./logs:/opt/redis/logs
+    ports:
+      - '6379:6379'
+    healthcheck:
+      test: redis-cli --no-auth-warning -a ${FSMREDIS_PASSWORD} ping | grep PONG
+      interval: 1s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - frontnet # TODO: remove
+      - backnet
