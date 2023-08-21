@@ -26,3 +26,5 @@ with env.prefixed(prefix + "POSTGRES_"):
 with env.prefixed(prefix + "FSMREDIS_"):
     FSM_HOST: str = env.str("HOST")
     FSM_PORT: int = env.int("PORT")
+
+DB_URL: str = f"postgresql+asyncpg://{PG_USER}:{PG_PASSWORD}@{PG_HOST}:{PG_PORT}/{PG_DATABASE}"

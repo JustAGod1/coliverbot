@@ -25,3 +25,5 @@ structlog==23.1.0
 tenacity==8.2.2
 typing_extensions==4.7.1
 yarl==1.9.2
+SQLAlchemy==2.0.19
+pytz==2023.3

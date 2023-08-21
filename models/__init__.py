@@ -1,1 +1,2 @@
-from .base import BaseModel as BaseModel
+from . import base
+from . import user

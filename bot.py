@@ -1,113 +1,39 @@
 import asyncio
 
+import sqlalchemy
 from aiogram import Dispatcher, Bot
 
-import asyncpg
-import structlog
-import tenacity
+import orjson
 from aiogram.client.session.aiohttp import AiohttpSession
 from aiogram.fsm.storage.redis import RedisStorage
 from redis.asyncio import Redis
-from tenacity import _utils
-import orjson
+
+from models.base import Base
+from sqlalchemy import MetaData
+from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
 
 import utils
 import handlers
-from middlewares import StructLoggingMiddleware
-
-TIMEOUT_BETWEEN_ATTEMPTS = 2
-MAX_TIMEOUT = 30
+from middlewares import StructLoggingMiddleware, DbSessionMiddleware, UserMiddleware
 
 
-def before_log(retry_state: tenacity.RetryCallState) -> None:
-    if retry_state.outcome is None:
-        return
-    if retry_state.outcome.failed:
-        verb, value = "raised", retry_state.outcome.exception()
-    else:
-        verb, value = "returned", retry_state.outcome.result()
-    logger = retry_state.kwargs["logger"]
-    logger.info(
-        "Retrying {callback} in {sleep} seconds as it {verb} {value}".format(
-            callback=_utils.get_callback_name(retry_state.fn),  # type: ignore
-            sleep=retry_state.next_action.sleep,  # type: ignore
-            verb=verb,
-            value=value,
-        ),
-        callback=_utils.get_callback_name(retry_state.fn),  # type: ignore
-        sleep=retry_state.next_action.sleep,  # type: ignore
-        verb=verb,
-        value=value,
-    )
+async def connect_db(dp: Dispatcher) -> None:
+    db_engine = create_async_engine(utils.config.DB_URL, echo=True)
+    with db_engine.connect() as conn:
+        Base.metadata.create_all(conn)
+    sessionmaker = async_sessionmaker(db_engine, expire_on_commit=False)
+
+    async with db_engine.begin() as conn:
+        await conn.run_sync(MetaData().create_all)
+
+    dp["db_engine"] = db_engine
+    dp["sessionmaker"] = sessionmaker
 
 
-def after_log(retry_state: tenacity.RetryCallState) -> None:
-    logger = retry_state.kwargs["logger"]
-    logger.info(
-        "Finished call to {callback!r} after {time:.2f}, this was the {attempt} time calling it.".format(
-            callback=_utils.get_callback_name(retry_state.fn),  # type: ignore
-            time=retry_state.seconds_since_start,
-            attempt=_utils.to_ordinal(retry_state.attempt_number),
-        ),
-        callback=_utils.get_callback_name(retry_state.fn),  # type: ignore
-        time=retry_state.seconds_since_start,
-        attempt=_utils.to_ordinal(retry_state.attempt_number),
-    )
-
-
-@tenacity.retry(
-    wait=tenacity.wait_fixed(TIMEOUT_BETWEEN_ATTEMPTS),
-    stop=tenacity.stop_after_delay(MAX_TIMEOUT),
-    before_sleep=before_log,
-    after=after_log,
-)
-async def wait_postgres(
-        logger: structlog.typing.FilteringBoundLogger,
-        host: str,
-        port: int,
-        user: str,
-        password: str,
-        database: str,
-) -> asyncpg.Pool:
-    db_pool: asyncpg.Pool = await asyncpg.create_pool(
-        host=host,
-        port=port,
-        user=user,
-        password=password,
-        database=database,
-        min_size=1,
-        max_size=3,
-    )
-    version = await db_pool.fetchrow("SELECT version() as ver;")
-    logger.debug("Connected to PostgreSQL.", version=version["ver"])
-    return db_pool
-
-
-async def create_db_connections(dp: Dispatcher) -> None:
-    logger: structlog.typing.FilteringBoundLogger = dp["business_logger"]
-
-    logger.debug("Connecting to PostgreSQL", db="main")
-    try:
-        db_pool = await wait_postgres(
-            logger=dp["db_logger"],
-            host=utils.config.PG_HOST,
-            port=utils.config.PG_PORT,
-            user=utils.config.PG_USER,
-            password=utils.config.PG_PASSWORD,
-            database=utils.config.PG_DATABASE,
-        )
-    except tenacity.RetryError:
-        logger.error("Failed to connect to PostgreSQL", db="main")
-        exit(1)
-    else:
-        logger.debug("Succesfully connected to PostgreSQL", db="main")
-    dp["db_pool"] = db_pool
-
-
-async def close_db_connections(dp: Dispatcher) -> None:
-    if "db_pool" in dp.workflow_data:
-        db_pool: asyncpg.Pool = dp["db_pool"]
-        await db_pool.close()
+async def close_db(dp: Dispatcher) -> None:
+    if "db_engine" in dp.workflow_data:
+        db_engine: sqlalchemy.ext.asyncio.AsyncEngine = dp["db_engine"]
+        await db_engine.dispose()
 
 
 def setup_handlers(dp: Dispatcher) -> None:
@@ -116,6 +42,8 @@ def setup_handlers(dp: Dispatcher) -> None:
 
 def setup_middlewares(dp: Dispatcher) -> None:
     dp.update.outer_middleware(StructLoggingMiddleware(logger=dp["aiogram_logger"]))
+    dp.update.middleware(DbSessionMiddleware(session_pool=dp["sessionmaker"]))
+    dp.update.middleware(UserMiddleware())
 
 
 def setup_logging(dp: Dispatcher) -> None:
@@ -128,7 +56,7 @@ async def setup_aiogram(dp: Dispatcher) -> None:
     setup_logging(dp)
     logger = dp["aiogram_logger"]
     logger.debug("Configuring aiogram")
-    await create_db_connections(dp)
+    await connect_db(dp)
     setup_handlers(dp)
     setup_middlewares(dp)
     logger.info("Configured aiogram")
@@ -142,7 +70,7 @@ async def aiogram_on_startup_polling(dispatcher: Dispatcher, bot: Bot) -> None:
 
 async def aiogram_on_shutdown_polling(dispatcher: Dispatcher, bot: Bot) -> None:
     dispatcher["aiogram_logger"].debug("Stopping polling")
-    await close_db_connections(dispatcher)
+    await close_db(dispatcher)
     await bot.session.close()
     await dispatcher.storage.close()
     dispatcher["aiogram_logger"].info("Stopped polling")
