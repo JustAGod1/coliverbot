@@ -8,7 +8,7 @@ from aiogram.client.session.aiohttp import AiohttpSession
 from aiogram.fsm.storage.redis import RedisStorage
 from redis.asyncio import Redis
 
-from models.base import Base
+import models
 from sqlalchemy import MetaData
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
 
@@ -19,8 +19,9 @@ from middlewares import StructLoggingMiddleware, DbSessionMiddleware, UserMiddle
 
 async def connect_db(dp: Dispatcher) -> None:
     db_engine = create_async_engine(utils.config.DB_URL, echo=True)
-    with db_engine.connect() as conn:
-        Base.metadata.create_all(conn)
+    meta = models.base.Base.metadata
+    async with db_engine.begin() as conn:
+        await conn.run_sync(meta.create_all)
     sessionmaker = async_sessionmaker(db_engine, expire_on_commit=False)
 
     async with db_engine.begin() as conn:

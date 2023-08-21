@@ -1,4 +1,4 @@
-from aiogram import html, types
+from aiogram import types
 from aiogram.fsm.context import FSMContext
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -17,19 +17,7 @@ async def start(msg: types.Message, state: FSMContext, session: AsyncSession, us
         await state.set_state(states.user.UserStates.waiting_full_name)
 
 
-async def deep_link(msg: types.Message, state: FSMContext, session: AsyncSession, user: models.user.User) -> None:
-    user.refer = msg.get_args().split("_")[1]
-    await session.commit()
-    await start(msg, state, session, user)
-
-
-
-
-
-
-
-
-
-
-
-
+# async def deep_link(msg: types.Message, state: FSMContext, session: AsyncSession, user: models.user.User) -> None:
+#     user.refer = msg.get_args().split("_")[1]
+#     await session.commit()
+#     await start(msg, state, session, user)
