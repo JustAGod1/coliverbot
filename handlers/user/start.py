@@ -21,3 +21,15 @@ async def deep_link(msg: types.Message, state: FSMContext, session: AsyncSession
     user.refer = msg.get_args().split("_")[1]
     await session.commit()
     await start(msg, state, session, user)
+
+
+
+
+
+
+
+
+
+
+
+

@@ -74,3 +74,4 @@ services:
     networks:
       - frontnet # TODO: remove
       - backnet
+
