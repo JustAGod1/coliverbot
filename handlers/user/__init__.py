@@ -3,6 +3,7 @@ from aiogram.filters import CommandStart, StateFilter
 
 import states
 from filters import ChatTypeFilter
+from keyboards.default.basic import BasicButtons as ButtonsSet
 
 from . import start
 from . import get_details
@@ -37,10 +38,17 @@ def prepare_router() -> Router:
                StateFilter(states.user.UserStates.waiting_photos), F.text | F.photo)
 
     m.register(menu.reapply,
-               StateFilter(states.user.UserStates.menu), F.text == "1")
+               StateFilter(states.user.UserStates.menu), F.text == ButtonsSet.menu_reapply)
     m.register(menu.show_my_profile,
-               StateFilter(states.user.UserStates.menu), F.text == "2")
-    m.register(menu.show_profiles,
-               StateFilter(states.user.UserStates.menu), F.text == "3")
+               StateFilter(states.user.UserStates.menu), F.text == ButtonsSet.menu_show_my_profile)
+    m.register(menu.show_opp_profile,
+               StateFilter(states.user.UserStates.menu), F.text == ButtonsSet.menu_show_opp_profile)
+
+    m.register(menu.like,
+               StateFilter(states.user.UserStates.scrolling), F.text == ButtonsSet.like)
+    m.register(menu.dislike,
+               StateFilter(states.user.UserStates.scrolling), F.text == ButtonsSet.dislike)
+    m.register(menu.sleep,
+               StateFilter(states.user.UserStates.scrolling), F.text == ButtonsSet.sleep)
 
     return user_router

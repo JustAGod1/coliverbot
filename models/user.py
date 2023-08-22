@@ -1,4 +1,5 @@
 import enum
+import random
 import uuid as python_uuid
 import datetime
 import pytz
@@ -9,7 +10,6 @@ from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Mapped
 from sqlalchemy.orm import mapped_column
-from aiogram.types import Message
 
 from .base import Base
 
@@ -66,12 +66,25 @@ async def get_or_create(session: AsyncSession, tgid: int) -> User:
             uuid=python_uuid.uuid4(),
             platform=Platforms.telegram,
             platform_id=tgid,
+            # TODO: for some reason time in db is without timezone
             start_time=datetime.datetime.now(pytz.timezone('Europe/Moscow')),
             last_access_time=datetime.datetime.now(pytz.timezone('Europe/Moscow'))
         )
         session.add(user)
-        await session.commit()
+    else:
+        user.last_access_time = datetime.datetime.now(pytz.timezone('Europe/Moscow'))
+    await session.commit()
     return user
+
+
+async def get_random(session: AsyncSession, user: User) -> User:
+    statement = (select(User)
+                 .where(User.platform == int(Platforms.telegram))
+                 .where(User.platform_id != user.platform_id)
+                 )
+    result = await session.execute(statement)
+    users = result.scalars().all()
+    return random.choice(users)
 
 # pydantic model
 # class User(BaseModel):

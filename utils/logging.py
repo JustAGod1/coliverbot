@@ -3,7 +3,6 @@ import sys
 
 import structlog
 
-import models
 from . import config
 
 
