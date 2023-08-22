@@ -28,7 +28,7 @@ class ApplicationTypes(enum.IntEnum):
     undefined = 0
     has_accomodation = 1
     searching_for = 2
-    both_and_nothing = 3
+    any = 3
 
 
 # sqlalchemy model

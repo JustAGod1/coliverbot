@@ -9,7 +9,7 @@ import messages
 
 async def start(msg: types.Message, state: FSMContext, session: AsyncSession, user: models.user.User) -> None:
     await msg.answer(messages.greeting)
-    if user.description is not None:
+    if user.photos:
         await msg.answer(messages.menu)
         await state.set_state(states.user.UserStates.menu)
     else:
