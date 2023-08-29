@@ -31,11 +31,18 @@ class ApplicationTypes(enum.IntEnum):
     any = 3
 
 
-# sqlalchemy model
+class UserStatuses(enum.IntEnum):
+    undefined = 0
+    active = 1
+    inactive = 2
+    paused = 3
+    banned = 4
+
+
 class User(Base):
     __tablename__ = 'users'
 
-    uuid: Mapped[python_uuid.UUID] = mapped_column(Uuid, primary_key=True)
+    uuid: Mapped[python_uuid.UUID] = mapped_column(Uuid, primary_key=True, default=python_uuid.uuid4)
     username: Mapped[Optional[str]] = mapped_column(String(32))
     refer: Mapped[Optional[str]] = mapped_column(String(50))
     platform: Mapped[int] = mapped_column(Integer, nullable=False)
@@ -51,7 +58,8 @@ class User(Base):
     acceptable_sex: Mapped[Optional[bool]] = mapped_column(Boolean)
     acceptable_application_type: Mapped[Optional[int]] = mapped_column(Integer)
     description: Mapped[Optional[str]] = mapped_column(Text)
-    photos: Mapped[Optional[List[str]]] = mapped_column(ARRAY(String(255)))  # TODO: check if more than 3/10?
+    photos: Mapped[Optional[List[str]]] = mapped_column(ARRAY(String(255)))
+    status: Mapped[int] = mapped_column(Integer, nullable=False)
 
 
 async def get_or_create(session: AsyncSession, tgid: int) -> User:
@@ -63,12 +71,12 @@ async def get_or_create(session: AsyncSession, tgid: int) -> User:
     user = result.scalar_one_or_none()
     if user is None:
         user = User(
-            uuid=python_uuid.uuid4(),
             platform=Platforms.telegram,
             platform_id=tgid,
             # TODO: for some reason time in db is without timezone
             start_time=datetime.datetime.now(pytz.timezone('Europe/Moscow')),
-            last_access_time=datetime.datetime.now(pytz.timezone('Europe/Moscow'))
+            last_access_time=datetime.datetime.now(pytz.timezone('Europe/Moscow')),
+            status=UserStatuses.inactive
         )
         session.add(user)
     else:
@@ -86,22 +94,11 @@ async def get_random(session: AsyncSession, user: User) -> User:
     users = result.scalars().all()
     return random.choice(users)
 
-# pydantic model
-# class User(BaseModel):
-#     uuid: python_uuid.UUID
-#     username: Optional[str]
-#     refer: Optional[str]
-#     platform: Platforms
-#     platform_id: int
-#     start_time: datetime.datetime
-#     last_access_time: datetime.datetime
-#
-#     full_name: Optional[str]
-#     sex: Optional[bool]
-#     age: Optional[int]
-#     location: Optional[str]
-#     acceptable_sex: Optional[bool]
-#     acceptable_application_type: Optional[ApplicationTypes]
-#     application_type: Optional[ApplicationTypes]
-#     description: Optional[str]
-#     photos: Optional[List[str]]  # TODO: check if more than 3/10?
+
+async def get_by_uuid(session: AsyncSession, uuid: python_uuid.UUID) -> User:
+    statement = (select(User)
+                 .where(User.uuid == uuid)
+                 )
+    result = await session.execute(statement)
+    user = result.scalar_one_or_none()
+    return user

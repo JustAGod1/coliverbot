@@ -25,6 +25,7 @@ class BasicButtons(DefaultConstructor):
     like: str = "❤️"
     dislike: str = "👎"
     sleep: str = "💤"
+    show_received: str = "Показывай!"
 
     @staticmethod
     def ask_full_name(user: models.user.User) -> ReplyKeyboardMarkup | ReplyKeyboardRemove:
@@ -99,4 +100,16 @@ class BasicButtons(DefaultConstructor):
     def scrolling() -> ReplyKeyboardMarkup:
         schema = [3]
         btns = [BasicButtons.like, BasicButtons.dislike, BasicButtons.sleep]
+        return BasicButtons._create_kb(btns, schema)
+
+    @staticmethod
+    def ask_reveal() -> ReplyKeyboardMarkup:
+        schema = [1]
+        btns = [BasicButtons.show_received]
+        return BasicButtons._create_kb(btns, schema)
+
+    @staticmethod
+    def scrolling_received() -> ReplyKeyboardMarkup:
+        schema = [2]
+        btns = [BasicButtons.like, BasicButtons.dislike]
         return BasicButtons._create_kb(btns, schema)

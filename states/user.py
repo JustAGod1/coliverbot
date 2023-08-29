@@ -16,5 +16,5 @@ class UserStates(StatesGroup):
     # wainting_for_pause_confirm = State()
     # paused = State()
     scrolling = State()
-    # waiting_reveal = State()
-    # scrolling_received = State()
+    waiting_reveal = State()
+    scrolling_received = State()

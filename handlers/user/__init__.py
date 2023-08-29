@@ -1,7 +1,7 @@
 from aiogram import Router, F
 from aiogram.filters import CommandStart, StateFilter
 
-import states
+from states.user import UserStates as uStates
 from filters import ChatTypeFilter
 from keyboards.default.basic import BasicButtons as ButtonsSet
 
@@ -18,37 +18,27 @@ def prepare_router() -> Router:
     # user_router.message.register(start.deep_link, CommandStart(deep_link_encoded=True))
     m.register(start.start, CommandStart())
 
-    m.register(get_details.get_full_name,
-               StateFilter(states.user.UserStates.waiting_full_name), F.text)
-    m.register(get_details.get_sex,
-               StateFilter(states.user.UserStates.waiting_sex), F.text)
-    m.register(get_details.get_age,
-               StateFilter(states.user.UserStates.waiting_age), F.text)
-    m.register(get_details.get_location,
-               StateFilter(states.user.UserStates.waiting_location), F.text)
-    m.register(get_details.get_acceptable_sex,
-               StateFilter(states.user.UserStates.waiting_acceptable_sex), F.text)
+    m.register(get_details.get_full_name, StateFilter(uStates.waiting_full_name), F.text)
+    m.register(get_details.get_sex, StateFilter(uStates.waiting_sex), F.text)
+    m.register(get_details.get_age, StateFilter(uStates.waiting_age), F.text)
+    m.register(get_details.get_location, StateFilter(uStates.waiting_location), F.text)
+    m.register(get_details.get_acceptable_sex, StateFilter(uStates.waiting_acceptable_sex), F.text)
     m.register(get_details.get_acceptable_application_type,
-               StateFilter(states.user.UserStates.waiting_acceptable_application_type), F.text)
-    m.register(get_details.get_application_type,
-               StateFilter(states.user.UserStates.waiting_application_type), F.text)
-    m.register(get_details.get_description,
-               StateFilter(states.user.UserStates.waiting_description), F.text)
-    m.register(get_details.get_photos,
-               StateFilter(states.user.UserStates.waiting_photos), F.text | F.photo)
+               StateFilter(uStates.waiting_acceptable_application_type), F.text)
+    m.register(get_details.get_application_type, StateFilter(uStates.waiting_application_type), F.text)
+    m.register(get_details.get_description, StateFilter(uStates.waiting_description), F.text)
+    m.register(get_details.get_photos, StateFilter(uStates.waiting_photos), F.text | F.photo)
 
-    m.register(menu.reapply,
-               StateFilter(states.user.UserStates.menu), F.text == ButtonsSet.menu_reapply)
-    m.register(menu.show_my_profile,
-               StateFilter(states.user.UserStates.menu), F.text == ButtonsSet.menu_show_my_profile)
-    m.register(menu.show_opp_profile,
-               StateFilter(states.user.UserStates.menu), F.text == ButtonsSet.menu_show_opp_profile)
+    m.register(menu.reapply, StateFilter(uStates.menu), F.text == ButtonsSet.menu_reapply)
+    m.register(menu.show_my_profile, StateFilter(uStates.menu), F.text == ButtonsSet.menu_show_my_profile)
+    m.register(menu.show_opp_profile, StateFilter(uStates.menu), F.text == ButtonsSet.menu_show_opp_profile)
 
-    m.register(menu.like,
-               StateFilter(states.user.UserStates.scrolling), F.text == ButtonsSet.like)
-    m.register(menu.dislike,
-               StateFilter(states.user.UserStates.scrolling), F.text == ButtonsSet.dislike)
-    m.register(menu.sleep,
-               StateFilter(states.user.UserStates.scrolling), F.text == ButtonsSet.sleep)
+    m.register(menu.like, StateFilter(uStates.scrolling), F.text == ButtonsSet.like)
+    m.register(menu.dislike, StateFilter(uStates.scrolling), F.text == ButtonsSet.dislike)
+    m.register(menu.sleep, StateFilter(uStates.scrolling), F.text == ButtonsSet.sleep)
+
+    m.register(menu.show_received, StateFilter(uStates.waiting_reveal), F.text == ButtonsSet.show_received)
+    m.register(menu.like_liked, StateFilter(uStates.scrolling_received), F.text == ButtonsSet.like)
+    m.register(menu.dislike_liked, StateFilter(uStates.scrolling_received), F.text == ButtonsSet.dislike)
 
     return user_router
