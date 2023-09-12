@@ -119,7 +119,9 @@ async def get_photos(msg: types.Message, state: FSMContext, session: AsyncSessio
     elif msg.text == ButtonsSet.finish and len(list(user.photos)) > 0:
         await show_my_profile(msg, state, user)
     elif msg.photo and len(list(user.photos)) < 5:
-        user.photos.append(msg.photo[-1].file_id)
+        phs = list(user.photos)
+        phs.append(msg.photo[-1].file_id)
+        user.photos = phs
         await session.commit()
         await msg.answer(messages.photo_added, reply_markup=ButtonsSet.ask_photos())
     else:
