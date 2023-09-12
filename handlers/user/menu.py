@@ -91,12 +91,14 @@ async def _state_to_showed_relation(state: FSMContext, session: AsyncSession) ->
     return await models.relation.get_by_id(session, int(data['showed_relation_id']))
 
 
-async def like_liked(msg: types.Message, state: FSMContext, session: AsyncSession, user: models.user.User) -> None:
+async def like_liked(msg: types.Message, state: FSMContext, session: AsyncSession, user: models.user.User,
+                     bot: aiogram.Bot) -> None:
     showed_relation: models.relation.Relation = await _state_to_showed_relation(state, session)
     showed_relation.relation_type = models.relation.RelationTypes.match
     await session.commit()
     showed_user: models.user.User = await models.user.get_by_uuid(session, showed_relation.from_uuid)
     await msg.answer(messages.you_matched(showed_user.username))
+    await bot.send_message(showed_user.platform_id, messages.you_matched(user.username))
     await show_received(msg, state, session, user)
 
 
