@@ -14,6 +14,13 @@ async def start(msg: types.Message, state: FSMContext, session: AsyncSession, us
         user.refer = msg.text.split()[1]
         await session.commit()
 
+    if msg.from_user.username is None or msg.from_user.username == "":
+        await msg.answer(messages.no_username)
+        return
+    else:
+        user.username = msg.from_user.username
+        await session.commit()
+
     await msg.answer(messages.greeting)
     if user.photos:
         await msg.answer(messages.menu, reply_markup=ButtonsSet.menu())
