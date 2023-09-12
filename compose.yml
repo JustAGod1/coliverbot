@@ -28,7 +28,7 @@ services:
 
   cl_postgres:
     container_name: cl_postgres
-    image: postgres:alpine
+    image: postgres:14-alpine
     command:
       - "postgres"
       - "-c"
