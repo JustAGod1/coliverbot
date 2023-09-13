@@ -1,3 +1,4 @@
+from asyncio import Lock
 from aiogram import types
 from aiogram.fsm.context import FSMContext
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -7,6 +8,9 @@ from keyboards.default.basic import BasicButtons as ButtonsSet
 import models
 from states.user import UserStates as uStates
 import messages
+
+
+photo_write_lock = Lock()
 
 
 async def get_full_name(msg: types.Message, state: FSMContext, session: AsyncSession, user: models.user.User) -> None:
@@ -110,19 +114,20 @@ async def get_description(msg: types.Message, state: FSMContext, session: AsyncS
 
 
 async def get_photos(msg: types.Message, state: FSMContext, session: AsyncSession, user: models.user.User) -> None:
-    if not user.photos:
-        user.photos = []
-    if msg.text == ButtonsSet.clear:
-        user.photos = []
-        await session.commit()
-        await msg.answer(messages.photos_cleared, reply_markup=ButtonsSet.ask_photos())
-    elif msg.text == ButtonsSet.finish and len(list(user.photos)) > 0:
-        await show_my_profile(msg, state, user)
-    elif msg.photo and len(list(user.photos)) < 5:
-        phs = list(user.photos)
-        phs.append(msg.photo[-1].file_id)
-        user.photos = phs
-        await session.commit()
-        await msg.answer(messages.photo_added, reply_markup=ButtonsSet.ask_photos())
-    else:
-        await msg.answer(messages.try_again, reply_markup=ButtonsSet.ask_photos())
+    async with photo_write_lock:
+        if not user.photos:
+            user.photos = []
+        if msg.text == ButtonsSet.clear:
+            user.photos = []
+            await session.commit()
+            await msg.answer(messages.photos_cleared, reply_markup=ButtonsSet.ask_photos())
+        elif msg.text == ButtonsSet.finish and len(list(user.photos)) > 0:
+            await show_my_profile(msg, state, user)
+        elif msg.photo and len(list(user.photos)) < 5:
+            phs = list(user.photos)
+            phs.append(msg.photo[-1].file_id)
+            user.photos = phs
+            await session.commit()
+            await msg.answer(messages.photo_added, reply_markup=ButtonsSet.ask_photos())
+        else:
+            await msg.answer(messages.try_again, reply_markup=ButtonsSet.ask_photos())
