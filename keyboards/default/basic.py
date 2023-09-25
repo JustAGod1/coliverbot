@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, List
 from aiogram.types import ReplyKeyboardMarkup, ReplyKeyboardRemove
 
 import models
@@ -8,6 +8,7 @@ from .consts import DefaultConstructor
 class BasicButtons(DefaultConstructor):
     i_am_m: str = "Я парень"
     i_am_f: str = "Я девушка"
+    cities: List[str] = ["Москва", "Санкт-Петербург"]
     i_have_accomodation: str = "Уже есть жилье"
     i_am_looking_for_accomodation: str = "Хочу заселиться"
     with_boys: str = "С парнями"
@@ -50,13 +51,16 @@ class BasicButtons(DefaultConstructor):
         return ReplyKeyboardRemove()
 
     @staticmethod
-    def ask_location(user: models.user.User) -> ReplyKeyboardMarkup | ReplyKeyboardRemove:
-        if user.location:
-            schema = [1]
-            btns = [str(user.location)]
-            return BasicButtons._create_kb(btns, schema)
-        # TODO: add location button
-        return ReplyKeyboardRemove()
+    def ask_location() -> ReplyKeyboardMarkup | ReplyKeyboardRemove:
+        if BasicButtons.cities is None:
+            return ReplyKeyboardRemove()
+        schema: List[int] = [1]
+        for city in BasicButtons.cities[1:]:
+            if schema[-1] == 1:
+                schema[-1] = 2
+            elif schema[-1] == 2:
+                schema.append(1)
+        return BasicButtons._create_kb(BasicButtons.cities, schema)
 
     @staticmethod
     def ask_application_type() -> ReplyKeyboardMarkup:

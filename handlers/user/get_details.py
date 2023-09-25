@@ -14,10 +14,13 @@ photo_write_lock = Lock()
 
 
 async def get_full_name(msg: types.Message, state: FSMContext, session: AsyncSession, user: models.user.User) -> None:
-    user.full_name = msg.text
-    await session.commit()
-    await msg.answer(messages.ask_sex, reply_markup=ButtonsSet.ask_sex())
-    await state.set_state(uStates.waiting_sex)
+    if len(msg.text) < 100:
+        user.full_name = msg.text
+        await session.commit()
+        await msg.answer(messages.ask_sex, reply_markup=ButtonsSet.ask_sex())
+        await state.set_state(uStates.waiting_sex)
+    else:
+        await msg.answer(messages.try_again, reply_markup=ButtonsSet.ask_full_name(user))
 
 
 async def get_sex(msg: types.Message, state: FSMContext, session: AsyncSession, user: models.user.User) -> None:
@@ -37,7 +40,7 @@ async def get_age(msg: types.Message, state: FSMContext, session: AsyncSession, 
         if 16 <= age <= 60:
             user.age = age
             await session.commit()
-            await msg.answer(messages.ask_location, reply_markup=ButtonsSet.ask_location(user))
+            await msg.answer(messages.ask_location, reply_markup=ButtonsSet.ask_location())
             await state.set_state(uStates.waiting_location)
         else:
             raise ValueError
@@ -46,10 +49,13 @@ async def get_age(msg: types.Message, state: FSMContext, session: AsyncSession, 
 
 
 async def get_location(msg: types.Message, state: FSMContext, session: AsyncSession, user: models.user.User) -> None:
-    user.location = msg.text
-    await session.commit()
-    await msg.answer(messages.ask_application_type, reply_markup=ButtonsSet.ask_application_type())
-    await state.set_state(uStates.waiting_application_type)
+    if msg.text in ButtonsSet.cities:
+        user.location = msg.text
+        await session.commit()
+        await msg.answer(messages.ask_application_type, reply_markup=ButtonsSet.ask_application_type())
+        await state.set_state(uStates.waiting_application_type)
+    else:
+        await msg.answer(messages.try_again, reply_markup=ButtonsSet.ask_location())
 
 
 async def get_application_type(msg: types.Message, state: FSMContext, session: AsyncSession,
@@ -121,13 +127,19 @@ async def get_photos(msg: types.Message, state: FSMContext, session: AsyncSessio
             user.photos = []
             await session.commit()
             await msg.answer(messages.photos_cleared, reply_markup=ButtonsSet.ask_photos())
-        elif msg.text == ButtonsSet.finish and len(list(user.photos)) > 0:
-            await show_my_profile(msg, state, user)
-        elif msg.photo and len(list(user.photos)) < 5:
-            phs = list(user.photos)
-            phs.append(msg.photo[-1].file_id)
-            user.photos = phs
-            await session.commit()
-            await msg.answer(messages.photo_added, reply_markup=ButtonsSet.ask_photos())
+        elif msg.text == ButtonsSet.finish:
+            if len(list(user.photos)) > 0:
+                await show_my_profile(msg, state, user)
+            else:
+                await msg.answer(messages.no_photos, reply_markup=ButtonsSet.ask_photos())
+        elif msg.photo:
+            if len(list(user.photos)) < 5:
+                phs = list(user.photos)
+                phs.append(msg.photo[-1].file_id)
+                user.photos = phs
+                await session.commit()
+                await msg.answer(messages.photo_added, reply_markup=ButtonsSet.ask_photos())
+            else:
+                await msg.answer(messages.full_photos, reply_markup=ButtonsSet.ask_photos())
         else:
             await msg.answer(messages.try_again, reply_markup=ButtonsSet.ask_photos())
