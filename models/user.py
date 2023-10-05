@@ -89,6 +89,7 @@ async def get_random(session: AsyncSession, user: User) -> User:
     statement = (select(User)
                  .where(User.platform == int(Platforms.telegram))
                  .where(User.platform_id != user.platform_id)
+                 .where(User.photos != {})
                  )
     result = await session.execute(statement)
     users = result.scalars().all()
