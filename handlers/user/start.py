@@ -11,7 +11,7 @@ import messages
 
 async def start(msg: types.Message, state: FSMContext, session: AsyncSession, user: models.user.User) -> None:
     if not user.refer and msg.text.split()[1:]:
-        user.refer = msg.text.split()[1]
+        user.refer = msg.text.split()[1] if len(msg.text.split()[1]) < 50 else None
         await session.commit()
 
     if msg.from_user.username is None or msg.from_user.username == "":
