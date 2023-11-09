@@ -35,3 +35,7 @@ docker run --rm -v coliver_bot_pgdata:/dbdata -v $(pwd):/backup alpine tar cvf /
 ```bash
 docker run --rm -v coliver_bot_pgdata:/dbdata -v $(pwd):/backup alpine ash -c "cd /dbdata && tar xvf /backup/backup.tar --strip 1"
 ```
+
+# Особые благодарности 
+
+Особое спасибо @JustAGod1 за неоценимую поддержку
